@@ -1,7 +1,7 @@
 // Translations for EN / RU / EL (Greek). Keys are dot-namespaced to mirror page sections.
 window.BRISK_I18N = {
 en: {
-  "meta.title": "Equipment Rental in Limassol, Cyprus — Brisk",
+  "meta.title": "Equipment Rental in Limassol, Cyprus — Rent4Clean",
   "meta.desc": "Rent professional Kärcher cleaning equipment in Limassol, Cyprus — steam cleaners, wet vacuums, construction vacuums and pressure washers from €40.",
   "nav.why": "Why rent",
   "nav.equipment": "Equipment",
@@ -94,10 +94,10 @@ en: {
   "footer.tagline": "Professional cleaning equipment rental in Limassol, Cyprus. Fixed pricing, delivery available, booked in minutes.",
   "footer.company": "Company",
   "footer.contact": "Contact",
-  "footer.copyright": "© 2026 Brisk. All rights reserved."
+  "footer.copyright": "© 2026 Rent4Clean. All rights reserved."
 },
 ru: {
-  "meta.title": "Аренда клинингового оборудования в Лимассоле, Кипр — Brisk",
+  "meta.title": "Аренда клинингового оборудования в Лимассоле, Кипр — Rent4Clean",
   "meta.desc": "Аренда профессионального оборудования Kärcher в Лимассоле, Кипр — пароочистители, моющие пылесосы, строительные пылесосы и аппараты высокого давления от €40.",
   "nav.why": "Зачем арендовать",
   "nav.equipment": "Оборудование",
@@ -190,10 +190,10 @@ ru: {
   "footer.tagline": "Аренда профессионального клинингового оборудования в Лимассоле, Кипр. Фиксированные цены, доставка, бронирование за минуты.",
   "footer.company": "Компания",
   "footer.contact": "Контакты",
-  "footer.copyright": "© 2026 Brisk. Все права защищены."
+  "footer.copyright": "© 2026 Rent4Clean. Все права защищены."
 },
 el: {
-  "meta.title": "Ενοικίαση Εξοπλισμού Καθαρισμού στη Λεμεσό, Κύπρος — Brisk",
+  "meta.title": "Ενοικίαση Εξοπλισμού Καθαρισμού στη Λεμεσό, Κύπρος — Rent4Clean",
   "meta.desc": "Νοικιάστε επαγγελματικό εξοπλισμό καθαρισμού Kärcher στη Λεμεσό, Κύπρος — ατμοκαθαριστές, ηλεκτρικές σκούπες υγρής χρήσης, σκούπες εργοταξίου και πλυστικά υψηλής πίεσης από €40.",
   "nav.why": "Γιατί ενοικίαση",
   "nav.equipment": "Εξοπλισμός",
@@ -286,6 +286,6 @@ el: {
   "footer.tagline": "Ενοικίαση επαγγελματικού εξοπλισμού καθαρισμού στη Λεμεσό, Κύπρος. Σταθερές τιμές, δυνατότητα παράδοσης, κράτηση σε λίγα λεπτά.",
   "footer.company": "Εταιρεία",
   "footer.contact": "Επικοινωνία",
-  "footer.copyright": "© 2026 Brisk. Με επιφύλαξη παντός δικαιώματος."
+  "footer.copyright": "© 2026 Rent4Clean. Με επιφύλαξη παντός δικαιώματος."
 }
 };

@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const phone = document.getElementById('qPhone').value.trim();
       const serviceEl = document.getElementById('qService');
       const service = serviceEl ? serviceEl.value : (quoteForm.dataset.service || 'a cleaning service');
-      const msg = encodeURIComponent(`Hi Brisk Cleaning! My name is ${name} (${phone}). I'd like a quote for: ${service}.`);
+      const msg = encodeURIComponent(`Hi Rent4Clean! My name is ${name} (${phone}). I'd like a quote for: ${service}.`);
       window.open(`https://wa.me/${BRISK_WHATSAPP}?text=${msg}`, '_blank');
     });
   }

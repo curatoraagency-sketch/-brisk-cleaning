@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rent4clean.cy/sitemap.xml

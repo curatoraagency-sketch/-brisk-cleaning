@@ -2,7 +2,34 @@
 // scroll-reveal animation, and the hero quote form -> WhatsApp handoff.
 const BRISK_WHATSAPP = '35797964748';
 
+// push a custom event into the GTM dataLayer
+function pushEvent(name, params) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push(Object.assign({ event: name }, params || {}));
+}
+
+// label which part of the page a clicked element lives in, for event context
+function pageArea(el) {
+  if (el.closest('#siteHeader')) return 'header';
+  if (el.closest('.hero-full')) return 'hero';
+  if (el.closest('.cta-band')) return 'cta_band';
+  if (el.closest('footer')) return 'footer';
+  if (el.closest('.fab-stack')) return 'floating_button';
+  return 'other';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // contact clicks -> dataLayer events for GTM/GA4
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="tel:"], a[href*="wa.me"]');
+    if (!link) return;
+    const isWhatsApp = link.href.includes('wa.me');
+    pushEvent(isWhatsApp ? 'whatsapp_click' : 'phone_click', {
+      area: pageArea(link),
+      link_url: link.href
+    });
+  });
+
   // header scroll state
   const header = document.getElementById('siteHeader');
   if (header) {
@@ -71,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     langSwitch.querySelectorAll('[data-lang]').forEach(btn => {
       btn.addEventListener('click', () => {
         applyLanguage(btn.dataset.lang);
+        pushEvent('language_change', { language: btn.dataset.lang });
         if (window.innerWidth <= 900 && primaryNav) primaryNav.style.display = 'none';
       });
     });
@@ -90,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isOpen) {
         item.classList.add('open');
         a.style.maxHeight = a.scrollHeight + 'px';
+        pushEvent('faq_open', { question: q.textContent.trim() });
       }
     });
   });

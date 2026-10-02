@@ -103,7 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-  applyLanguage(localStorage.getItem('brisk_lang') || 'en');
+  // ?lang=ru / ?lang=el in the URL (e.g. from ads) wins over the remembered choice
+  const urlLang = new URLSearchParams(location.search).get('lang');
+  applyLanguage(urlLang || localStorage.getItem('brisk_lang') || 'en');
 
   // FAQ accordion
   document.querySelectorAll('.faq-item').forEach(item => {

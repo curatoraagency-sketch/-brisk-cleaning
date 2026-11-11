@@ -3,7 +3,7 @@
 const BRISK_WHATSAPP = '35797964748';
 // Google Apps Script web app that forwards booking requests to Telegram.
 // Empty -> the booking form falls back to opening WhatsApp with the request prefilled.
-const BOOKING_ENDPOINT = '';
+const BOOKING_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw7zANvOl5lO8XVo0MEU0lkzaTZxbTjwPcubsF6X36giqxAeLyONuLSDDwJeUuh87M/exec';
 
 // push a custom event into the GTM dataLayer
 function pushEvent(name, params) {

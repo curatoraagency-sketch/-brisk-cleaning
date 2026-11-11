@@ -1,6 +1,9 @@
 // Shared behaviour for every page: header scroll state, mobile nav, FAQ accordion,
-// scroll-reveal animation, and the hero quote form -> WhatsApp handoff.
+// scroll-reveal animation, and the booking modal (Rent buttons -> Telegram, WhatsApp fallback).
 const BRISK_WHATSAPP = '35797964748';
+// Google Apps Script web app that forwards booking requests to Telegram.
+// Empty -> the booking form falls back to opening WhatsApp with the request prefilled.
+const BOOKING_ENDPOINT = '';
 
 // push a custom event into the GTM dataLayer
 function pushEvent(name, params) {
@@ -131,17 +134,111 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.15 });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  // hero quote form -> builds a WhatsApp message (demo number)
-  const quoteForm = document.getElementById('quoteForm');
-  if (quoteForm) {
-    quoteForm.addEventListener('submit', function (e) {
+  // booking modal: "Rent" on a card -> form with that equipment preselected -> Telegram (via Apps Script)
+  const modal = document.getElementById('bookModal');
+  const bookForm = document.getElementById('bookForm');
+  if (modal && bookForm) {
+    const equipSel = document.getElementById('bookEquip');
+    const nameIn = document.getElementById('bookName');
+    const phoneIn = document.getElementById('bookPhone');
+    const errBox = document.getElementById('bookError');
+    const done = document.getElementById('bookDone');
+    const submitBtn = bookForm.querySelector('[type="submit"]');
+    const cards = [...document.querySelectorAll('[data-equip]')];
+    const t = (key) => {
+      const lang = document.documentElement.lang;
+      return (BRISK_I18N[lang] && BRISK_I18N[lang][key]) || BRISK_I18N.en[key] || '';
+    };
+    // card label in a given language: "Steam Cleaner — Kärcher SC 3 EasyFix" / "Combo #1 — Steam cleaner + wet vacuum"
+    const cardLabel = (card, lang) => {
+      const dict = BRISK_I18N[lang] || BRISK_I18N.en;
+      const title = card.querySelector('h4, h5');
+      const sub = card.querySelector('.model') || card.querySelector('.tier-body p');
+      const tr = (el) => el ? (dict[el.dataset.i18n] || el.textContent).trim() : '';
+      return [tr(title), tr(sub)].filter(Boolean).join(' — ');
+    };
+    const showError = (html) => { errBox.innerHTML = html; errBox.hidden = !html; };
+
+    function openBooking(equipId) {
+      equipSel.innerHTML = '';
+      cards.forEach(card => equipSel.add(new Option(cardLabel(card, document.documentElement.lang), card.dataset.equip)));
+      equipSel.value = equipId;
+      showError('');
+      [nameIn, phoneIn].forEach(i => i.classList.remove('invalid'));
+      bookForm.hidden = false;
+      done.hidden = true;
+      document.documentElement.classList.add('modal-open');
+      modal.showModal();
+      pushEvent('rent_click', { equipment: equipId });
+    }
+    // unlock page scroll on every way out (the dialog 'close' event alone is not reliable everywhere)
+    const unlockScroll = () => document.documentElement.classList.remove('modal-open');
+    function closeBooking() { modal.close(); unlockScroll(); }
+
+    document.querySelectorAll('.rent-btn').forEach(btn => btn.addEventListener('click', () => {
+      openBooking(btn.closest('[data-equip]').dataset.equip);
+    }));
+    modal.querySelectorAll('[data-book-close]').forEach(b => b.addEventListener('click', closeBooking));
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeBooking(); }); // backdrop click
+    modal.addEventListener('cancel', unlockScroll); // Esc key
+    modal.addEventListener('close', unlockScroll);
+    [nameIn, phoneIn].forEach(i => i.addEventListener('input', () => i.classList.remove('invalid')));
+
+    bookForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('qName').value.trim();
-      const phone = document.getElementById('qPhone').value.trim();
-      const serviceEl = document.getElementById('qService');
-      const service = serviceEl ? serviceEl.value : (quoteForm.dataset.service || 'a cleaning service');
-      const msg = encodeURIComponent(`Hi Rent4Clean! My name is ${name} (${phone}). I'd like a quote for: ${service}.`);
-      window.open(`https://wa.me/${BRISK_WHATSAPP}?text=${msg}`, '_blank');
+      const name = nameIn.value.trim();
+      const phone = phoneIn.value.trim();
+      const digits = phone.replace(/\D/g, '');
+      if (!name) { nameIn.classList.add('invalid'); showError(t('book.errName')); nameIn.focus(); return; }
+      if (digits.length < 8 || digits === '357') { phoneIn.classList.add('invalid'); showError(t('book.errPhone')); phoneIn.focus(); return; }
+
+      const card = cards.find(c => c.dataset.equip === equipSel.value);
+      const equipment = cardLabel(card, 'ru'); // the owner reads Telegram requests in Russian
+      // the WhatsApp text is sent by the visitor, so write it in their language
+      const waText = encodeURIComponent(t('book.waMsg')
+        .replace('{equip}', cardLabel(card, document.documentElement.lang))
+        .replace('{name}', name).replace('{phone}', phone));
+      const waLink = `https://wa.me/${BRISK_WHATSAPP}?text=${waText}`;
+
+      // no Telegram endpoint configured yet -> hand the request over to WhatsApp
+      if (!BOOKING_ENDPOINT) {
+        pushEvent('booking_submit', { equipment: equipSel.value, channel: 'whatsapp' });
+        window.open(waLink, '_blank');
+        closeBooking();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('book.sending');
+      showError('');
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15000);
+        // text/plain body keeps it a "simple" request, so Apps Script needs no CORS preflight
+        const res = await fetch(BOOKING_ENDPOINT, {
+          method: 'POST',
+          body: JSON.stringify({
+            equipment, name, phone,
+            lang: document.documentElement.lang,
+            page: location.href,
+            website: bookForm.website.value // honeypot
+          }),
+          signal: ctrl.signal
+        });
+        clearTimeout(timer);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'send failed');
+        pushEvent('booking_submit', { equipment: equipSel.value, channel: 'telegram' });
+        bookForm.reset();
+        phoneIn.value = '+357 ';
+        bookForm.hidden = true;
+        done.hidden = false;
+      } catch (err) {
+        showError(`${t('book.errSend')} <a href="${waLink}" target="_blank" rel="noopener">${t('common.whatsappUs')} →</a>`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = t('book.send');
+      }
     });
   }
 });

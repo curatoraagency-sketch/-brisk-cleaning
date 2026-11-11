@@ -178,7 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     };
     // GA4 ecommerce-shaped dataLayer event (also flat fields for simple GTM variables)
-    const pushItemEvent = (name, card, extra) => {
+    // ecomExtra goes inside the ecommerce object (e.g. transaction_id for purchase)
+    const pushItemEvent = (name, card, extra, ecomExtra) => {
       const item = itemData(card);
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({ ecommerce: null }); // clear the previous ecommerce object, as Google recommends
@@ -190,13 +191,15 @@ document.addEventListener('DOMContentLoaded', () => {
         price: item.price,
         currency: 'EUR',
         value: item.price,
-        ecommerce: {
+        ecommerce: Object.assign({
           currency: 'EUR',
           value: item.price,
           items: [Object.assign({ index: cards.indexOf(card), quantity: 1 }, item)]
-        }
+        }, ecomExtra || {})
       }, extra || {}));
     };
+    // unique per request so GA4 never counts the same booking twice
+    const newTransactionId = () => 'R4C-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
 
     function openBooking(equipId) {
       equipSel.innerHTML = '';
@@ -268,6 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'send failed');
         pushItemEvent('booking_submit', card, { channel: 'telegram' });
+        // GA4 ecommerce "purchase" for a confirmed booking request (only after Telegram accepted it)
+        const transactionId = newTransactionId();
+        pushItemEvent('purchase', card, { channel: 'telegram', transaction_id: transactionId }, { transaction_id: transactionId });
         bookForm.reset();
         phoneIn.value = '+357 ';
         bookForm.hidden = true;

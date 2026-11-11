@@ -159,6 +159,45 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const showError = (html) => { errBox.innerHTML = html; errBox.hidden = !html; };
 
+    // analytics item for a card, always in English so GA4 reports don't split by site language;
+    // the price is read from the card itself, so it stays in sync with the page
+    const itemData = (card) => {
+      const en = BRISK_I18N.en;
+      const isCombo = card.classList.contains('tier-card');
+      const titleEl = card.querySelector('h4, h5');
+      const title = en[titleEl.dataset.i18n] || titleEl.textContent.trim();
+      const priceEl = card.querySelector('.price b');
+      const price = priceEl ? parseFloat(priceEl.textContent.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
+      const descEl = card.querySelector('.tier-body p');
+      return {
+        item_id: card.dataset.equip,
+        item_name: isCombo ? `${title}: ${en[descEl.dataset.i18n] || descEl.textContent.trim()}` : card.querySelector('.model').textContent.trim(),
+        item_category: isCombo ? 'Combo' : title,
+        item_variant: isCombo ? 'combo' : 'per day',
+        price
+      };
+    };
+    // GA4 ecommerce-shaped dataLayer event (also flat fields for simple GTM variables)
+    const pushItemEvent = (name, card, extra) => {
+      const item = itemData(card);
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ ecommerce: null }); // clear the previous ecommerce object, as Google recommends
+      pushEvent(name, Object.assign({
+        equipment: item.item_id,
+        item_id: item.item_id,
+        item_name: item.item_name,
+        item_category: item.item_category,
+        price: item.price,
+        currency: 'EUR',
+        value: item.price,
+        ecommerce: {
+          currency: 'EUR',
+          value: item.price,
+          items: [Object.assign({ index: cards.indexOf(card), quantity: 1 }, item)]
+        }
+      }, extra || {}));
+    };
+
     function openBooking(equipId) {
       equipSel.innerHTML = '';
       cards.forEach(card => equipSel.add(new Option(cardLabel(card, document.documentElement.lang), card.dataset.equip)));
@@ -169,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       done.hidden = true;
       document.documentElement.classList.add('modal-open');
       modal.showModal();
-      pushEvent('rent_click', { equipment: equipId });
+      pushItemEvent('rent_click', cards.find(c => c.dataset.equip === equipId));
     }
     // unlock page scroll on every way out (the dialog 'close' event alone is not reliable everywhere)
     const unlockScroll = () => document.documentElement.classList.remove('modal-open');
@@ -202,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // no Telegram endpoint configured yet -> hand the request over to WhatsApp
       if (!BOOKING_ENDPOINT) {
-        pushEvent('booking_submit', { equipment: equipSel.value, channel: 'whatsapp' });
+        pushItemEvent('booking_submit', card, { channel: 'whatsapp' });
         window.open(waLink, '_blank');
         closeBooking();
         return;
@@ -228,12 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(timer);
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'send failed');
-        pushEvent('booking_submit', { equipment: equipSel.value, channel: 'telegram' });
+        pushItemEvent('booking_submit', card, { channel: 'telegram' });
         bookForm.reset();
         phoneIn.value = '+357 ';
         bookForm.hidden = true;
         done.hidden = false;
       } catch (err) {
+        pushEvent('booking_error', { equipment: card.dataset.equip, error_message: String(err && err.message || err).slice(0, 100) });
         showError(`${t('book.errSend')} <a href="${waLink}" target="_blank" rel="noopener">${t('common.whatsappUs')} →</a>`);
       } finally {
         submitBtn.disabled = false;
